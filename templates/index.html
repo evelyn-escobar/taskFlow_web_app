@@ -1,384 +1,276 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends "base.html" %}
 
-<head>
+{% block title %}Mis tareas | TaskFlow AI{% endblock %}
 
-    <meta charset="UTF-8">
+{% block content %}
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+<header class="topbar">
 
-    <title>TaskFlow AI</title>
+    <span class="brand">🚀 TaskFlow AI</span>
 
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', filename='style.css') }}"
-    >
+    <div class="topbar-user">
+        <span>Hola, <strong>{{ username }}</strong></span>
+        <a href="{{ url_for('logout') }}" class="btn btn-light">Cerrar sesión</a>
+    </div>
 
-</head>
+</header>
 
-<body>
+<div class="dashboard">
 
-<div class="dashboard-container">
+    <!-- PANEL LATERAL -->
 
-    <!-- SIDEBAR -->
+    <aside class="sidebar">
 
-    <div class="sidebar">
+        <section class="panel">
 
-        <!-- CALENDARIO -->
+            <h2>🤖 TaskBot</h2>
 
-        <div class="side-card">
+            <p class="bot-message">{{ bot_message }}</p>
+
+        </section>
+
+        <section class="panel">
 
             <h2>📅 Calendario</h2>
 
             <div id="calendar"></div>
 
-        </div>
+            <p class="hint">Los días marcados tienen entregas pendientes.</p>
 
-        <!-- TASKBOT -->
+        </section>
 
-        <div class="side-card">
+        <section class="panel">
 
-            <h2>🤖 TaskBot</h2>
+            <h2>📌 Próximas entregas</h2>
 
-            <div class="bot-status">
-                ● En línea
-            </div>
+            {% for tarea in proximas %}
 
-            <p>
-                {{ bot_message }}
-            </p>
-
-            <hr>
-
-            <small>
-                🚀 TaskFlow AI analiza tus próximas entregas.
-            </small>
-
-        </div>
-
-        <!-- ESTADÍSTICAS -->
-
-        <div class="side-card">
-
-            <h2>📊 Estadísticas</h2>
-
-            <p>
-                ✅ Completadas:
-                {{ tasks | selectattr(5, 'equalto', 1) | list | length }}
-            </p>
-
-            <p>
-                📋 Pendientes:
-                {{ tasks | selectattr(5, 'equalto', 0) | list | length }}
-            </p>
-
-        </div>
-
-    </div>
-
-    <!-- MAIN CONTENT -->
-
-    <div class="main-content">
-
-        <!-- HEADER -->
-
-        <div class="header">
-
-            <h1>
-                ✨ Bienvenida, {{ username }}
-            </h1>
-
-            <p>
-
-                Plataforma inteligente para organizar tareas,
-                entregas académicas y mejorar tu productividad.
-
-            </p>
-
-        </div>
-
-        <!-- CARDS -->
-
-        <div class="cards">
-
-            <div class="card">
-
-                <h3>📋 Total tareas</h3>
-
-                <p>
-                    {{ tasks|length }}
-                </p>
-
-            </div>
-
-            <div class="card">
-
-                <h3>✅ Completadas</h3>
-
-                <p>
-                    {{ tasks | selectattr(5, 'equalto', 1) | list | length }}
-                </p>
-
-            </div>
-
-            <div class="card">
-
-                <h3>🚀 Productividad</h3>
-
-                <p>
-                    Activa
-                </p>
-
-            </div>
-
-        </div>
-
-        <!-- EXTRA SECTION -->
-
-        <div class="extra-section">
-
-            <div class="info-card">
-
-                <h3>📌 Próximas entregas</h3>
-
-                {% for task in tasks[:3] %}
-
-                    <div class="upcoming-task">
-
-                        <strong>
-                            {{ task[2] }}
-                        </strong>
-
-                        <small>
-                            📅 {{ task[4] }}
-                        </small>
-
-                    </div>
-
-                {% endfor %}
-
-            </div>
-
-            <div class="info-card">
-
-                <h3>🎯 Objetivo diario</h3>
-
-                <p>
-
-                    Completa tareas importantes
-                    para mantener un progreso constante.
-
-                </p>
-
-            </div>
-
-            <div class="info-card">
-
-                <h3>💡 Consejo</h3>
-
-                <p>
-
-                    Divide tareas grandes en pequeñas metas.
-                    Esto mejora la concentración.
-
-                </p>
-
-            </div>
-
-        </div>
-
-        <!-- FORMULARIO -->
-
-        <form action="/add" method="POST">
-
-            <input
-                type="text"
-                name="title"
-                placeholder="Nueva tarea..."
-                required
-            >
-
-            <input
-                type="date"
-                name="due_date"
-                required
-            >
-
-            <button type="submit">
-                Agregar
-            </button>
-
-        </form>
-
-        <!-- LISTA -->
-
-        <ul>
-
-            {% for task in tasks %}
-
-            <li>
-
-                <div class="task-info">
-
-                    <span
-                        class="{% if task[5] == 1 %}completed{% endif %}"
-                    >
-
-                        {{ task[2] }}
-
-                    </span>
-
-                    <small>
-
-                        {% if task[3] == "Alta" %}
-                            🔴
-                        {% elif task[3] == "Media" %}
-                            🟡
-                        {% else %}
-                            🟢
-                        {% endif %}
-
-                        {{ task[3] }}
-
-                        |
-
-                        📅 {{ task[4] }}
-
-                    </small>
-
+                <div class="upcoming">
+                    <strong>{{ tarea.title }}</strong>
+                    <small>{{ tarea.plazo }}</small>
                 </div>
 
-                <div class="actions">
+            {% else %}
 
-                    {% if task[5] == 0 %}
-
-                        <a href="/complete/{{ task[0] }}">
-                            ✅
-                        </a>
-
-                    {% endif %}
-
-                    <a href="/delete/{{ task[0] }}">
-                        ❌
-                    </a>
-
-                </div>
-
-            </li>
+                <p class="hint">No tienes entregas próximas.</p>
 
             {% endfor %}
 
-        </ul>
+        </section>
 
-        <!-- FOOTER -->
+    </aside>
 
-        <div class="dashboard-footer">
+    <!-- CONTENIDO PRINCIPAL -->
 
-            <p>
+    <main class="main">
 
-                🚀 TaskFlow AI · Plataforma desarrollada
-                con Python, Flask y SQLite.
+        <section class="stats">
 
-            </p>
+            <div class="stat">
+                <span class="stat-label">Total</span>
+                <span class="stat-value">{{ stats.total }}</span>
+            </div>
 
-        </div>
+            <div class="stat">
+                <span class="stat-label">Pendientes</span>
+                <span class="stat-value">{{ stats.pendientes }}</span>
+            </div>
 
-        <a class="logout-btn" href="/logout">
+            <div class="stat {% if stats.vencidas %}stat-danger{% endif %}">
+                <span class="stat-label">Vencidas</span>
+                <span class="stat-value">{{ stats.vencidas }}</span>
+            </div>
 
-            Cerrar sesión
+            <div class="stat">
+                <span class="stat-label">Completadas</span>
+                <span class="stat-value">{{ stats.completadas }}</span>
+            </div>
 
-        </a>
+        </section>
 
-    </div>
+        <section class="progress-box" aria-label="Progreso">
+
+            <div class="progress-header">
+                <span>Progreso</span>
+                <strong>{{ stats.progreso }}%</strong>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: {{ stats.progreso }}%"></div>
+            </div>
+
+        </section>
+
+        <!-- NUEVA TAREA -->
+
+        <section class="panel">
+
+            <h2>➕ Nueva tarea</h2>
+
+            <form action="{{ url_for('add_task') }}" method="POST" class="task-form">
+
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="field field-grow">
+                    <label for="title">¿Qué tienes que hacer?</label>
+                    <input id="title" type="text" name="title" maxlength="120" placeholder="Ej.: Entregar taller de bases de datos" required>
+                </div>
+
+                <div class="field">
+                    <label for="due_date">Fecha de entrega</label>
+                    <input id="due_date" type="date" name="due_date" value="{{ hoy }}" required>
+                </div>
+
+                <div class="field field-full">
+                    <label for="notes">Notas (opcional)</label>
+                    <textarea id="notes" name="notes" rows="2" maxlength="500" placeholder="Detalles, enlaces o recordatorios"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Agregar tarea</button>
+
+            </form>
+
+            <p class="hint">La prioridad se calcula sola: 🔴 3 días o menos · 🟡 hasta 7 días · 🟢 más de 7 días.</p>
+
+        </section>
+
+        <!-- LISTA -->
+
+        <section class="panel">
+
+            <div class="list-header">
+
+                <nav class="filters" aria-label="Filtrar tareas">
+
+                    {% for clave, nombre in filtros.items() %}
+
+                        <a href="{{ url_for('dashboard', filtro=clave, q=busqueda or None) }}"
+                           class="filter {% if filtro == clave %}filter-active{% endif %}">{{ nombre }}</a>
+
+                    {% endfor %}
+
+                </nav>
+
+                <form method="GET" class="search">
+                    <input type="hidden" name="filtro" value="{{ filtro }}">
+                    <input type="search" name="q" value="{{ busqueda }}" placeholder="Buscar tarea..." aria-label="Buscar tarea">
+                </form>
+
+            </div>
+
+            <ul class="task-list">
+
+                {% for tarea in tareas %}
+
+                <li class="task {% if tarea.completed %}task-done{% elif tarea.vencida %}task-overdue{% endif %}">
+
+                    <form action="{{ url_for('toggle_task', task_id=tarea.id) }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="check" title="{% if tarea.completed %}Marcar como pendiente{% else %}Marcar como completada{% endif %}">
+                            {% if tarea.completed %}✔{% endif %}
+                        </button>
+                    </form>
+
+                    <div class="task-info">
+
+                        <span class="task-title">{{ tarea.title }}</span>
+
+                        {% if tarea.notes %}
+                            <span class="task-notes">{{ tarea.notes }}</span>
+                        {% endif %}
+
+                        <span class="task-meta">
+
+                            {% if not tarea.completed %}
+                                <span class="badge badge-{{ tarea.priority | lower }}">{{ tarea.priority }}</span>
+                            {% endif %}
+
+                            📅 {{ tarea.due_label }}
+
+                            {% if not tarea.completed %} · {{ tarea.plazo }}{% endif %}
+
+                        </span>
+
+                    </div>
+
+                    <div class="task-actions">
+
+                        <a href="{{ url_for('edit_task', task_id=tarea.id) }}" class="icon-btn" title="Editar">✏️</a>
+
+                        <form action="{{ url_for('delete_task', task_id=tarea.id) }}" method="POST" data-confirm="¿Eliminar «{{ tarea.title }}»? Esta acción no se puede deshacer.">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="icon-btn" title="Eliminar">🗑️</button>
+                        </form>
+
+                    </div>
+
+                </li>
+
+                {% else %}
+
+                <li class="empty">
+
+                    {% if busqueda %}
+                        No hay tareas que coincidan con «{{ busqueda }}».
+                    {% elif filtro == "completadas" %}
+                        Aún no has completado tareas.
+                    {% elif filtro == "vencidas" %}
+                        🎉 No tienes tareas vencidas.
+                    {% else %}
+                        No tienes tareas pendientes. ¡Agrega una arriba!
+                    {% endif %}
+
+                </li>
+
+                {% endfor %}
+
+            </ul>
+
+        </section>
+
+        <footer class="footer">
+            TaskFlow AI · Desarrollado por Evelyn Escobar con Python, Flask y SQLite
+        </footer>
+
+    </main>
 
 </div>
 
-<!-- JAVASCRIPT CALENDARIO -->
+{% endblock %}
+
+{% block scripts %}
 
 <script>
 
-const calendar = document.getElementById("calendar");
+    // Calendario del mes actual, marcando los días con entregas pendientes
+    const diasConTareas = {{ dias_con_tareas | tojson }};
+    const calendar = document.getElementById("calendar");
+    const hoy = new Date();
+    const mes = hoy.getMonth();
+    const anio = hoy.getFullYear();
+    const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio",
+                   "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
-const date = new Date();
+    let html = `<h3 class="calendar-title">${meses[mes]} ${anio}</h3><div class="calendar-grid">`;
 
-const month = date.getMonth();
+    ["D", "L", "M", "M", "J", "V", "S"].forEach((d) => { html += `<div class="weekday">${d}</div>`; });
 
-const year = date.getFullYear();
+    const primerDia = new Date(anio, mes, 1).getDay();
+    const ultimoDia = new Date(anio, mes + 1, 0).getDate();
 
-const months = [
-
-    "Enero",
-    "Febrero",
-    "Marzo",
-    "Abril",
-    "Mayo",
-    "Junio",
-    "Julio",
-    "Agosto",
-    "Septiembre",
-    "Octubre",
-    "Noviembre",
-    "Diciembre"
-
-];
-
-const daysContainer = document.createElement("div");
-
-daysContainer.classList.add("calendar-grid");
-
-const firstDay = new Date(year, month, 1).getDay();
-
-const lastDate = new Date(year, month + 1, 0).getDate();
-
-calendar.innerHTML = `
-
-<h3 class="calendar-title">
-${months[month]} ${year}
-</h3>
-
-<div class="weekdays">
-
-    <div>Dom</div>
-    <div>Lun</div>
-    <div>Mar</div>
-    <div>Mié</div>
-    <div>Jue</div>
-    <div>Vie</div>
-    <div>Sáb</div>
-
-</div>
-
-`;
-
-for (let i = 0; i < firstDay; i++) {
-
-    const empty = document.createElement("div");
-
-    daysContainer.appendChild(empty);
-}
-
-for (let day = 1; day <= lastDate; day++) {
-
-    const dayElement = document.createElement("div");
-
-    dayElement.classList.add("calendar-day");
-
-    if (day === date.getDate()) {
-
-        dayElement.classList.add("today");
+    for (let i = 0; i < primerDia; i++) {
+        html += "<div></div>";
     }
 
-    dayElement.innerText = day;
+    for (let dia = 1; dia <= ultimoDia; dia++) {
+        const clases = ["calendar-day"];
+        if (dia === hoy.getDate()) clases.push("today");
+        if (diasConTareas.includes(dia)) clases.push("has-task");
+        html += `<div class="${clases.join(" ")}">${dia}</div>`;
+    }
 
-    daysContainer.appendChild(dayElement);
-}
-
-calendar.appendChild(daysContainer);
+    calendar.innerHTML = html + "</div>";
 
 </script>
 
-</body>
-</html>
+{% endblock %}

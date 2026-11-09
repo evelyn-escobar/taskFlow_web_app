@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Editar tarea | TaskFlow AI{% endblock %}
+
+{% block body_class %}auth-body{% endblock %}
+
+{% block content %}
+
+<main class="auth-card auth-card-wide">
+
+    <h1>✏️ Editar tarea</h1>
+
+    {% if error %}
+        <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" class="auth-form">
+
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <label for="title">Título</label>
+        <input id="title" type="text" name="title" value="{{ tarea.title }}" maxlength="120" required autofocus>
+
+        <label for="due_date">Fecha de entrega</label>
+        <input id="due_date" type="date" name="due_date" value="{{ tarea.due_date }}" required>
+
+        <label for="notes">Notas</label>
+        <textarea id="notes" name="notes" rows="3" maxlength="500">{{ tarea.notes }}</textarea>
+
+        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+
+    </form>
+
+    <p class="auth-links"><a href="{{ url_for('dashboard') }}">← Volver a mis tareas</a></p>
+
+</main>
+
+{% endblock %}

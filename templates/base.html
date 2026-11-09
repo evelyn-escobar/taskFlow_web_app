@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}TaskFlow AI{% endblock %}</title>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body class="{% block body_class %}{% endblock %}">
+
+{% with mensajes = get_flashed_messages(with_categories=true) %}
+
+    {% if mensajes %}
+
+        <div class="toasts" role="status">
+
+            {% for categoria, mensaje in mensajes %}
+
+                <div class="toast toast-{{ categoria }}">{{ mensaje }}</div>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+{% endwith %}
+
+{% block content %}{% endblock %}
+
+<script>
+
+    // Los avisos desaparecen solos después de unos segundos
+    setTimeout(() => {
+        document.querySelectorAll(".toast").forEach((t) => t.classList.add("toast-hide"));
+    }, 3500);
+
+    // Pide confirmación antes de acciones que no se pueden deshacer
+    document.querySelectorAll("form[data-confirm]").forEach((form) => {
+        form.addEventListener("submit", (e) => {
+            if (!confirm(form.dataset.confirm)) {
+                e.preventDefault();
+            }
+        });
+    });
+
+</script>
+
+{% block scripts %}{% endblock %}
+
+</body>
+
+</html>
