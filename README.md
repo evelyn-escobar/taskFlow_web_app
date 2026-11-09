@@ -34,7 +34,6 @@ La plataforma permite gestionar tareas, visualizar fechas importantes mediante u
 
 #  Vista previa
 
-Próximamente se agregarán capturas de pantalla de la plataforma.
 <img width="1433" height="961" alt="imagen" src="https://github.com/user-attachments/assets/ac029735-ad60-45f5-a73b-ae88a1d2cec2" />
 <img width="1426" height="959" alt="imagen" src="https://github.com/user-attachments/assets/624d9367-e70f-436b-bc01-7c5fdee27158" />
 <img width="1424" height="972" alt="imagen" src="https://github.com/user-attachments/assets/b2b5bb79-ef17-486d-a834-b280d8d42e54" />
@@ -48,7 +47,7 @@ Próximamente se agregarán capturas de pantalla de la plataforma.
 ## 1. Clonar repositorio
 
 ```bash
-git clone https://github.com/daniluescobar-hue/taskflow-ai.git
+git clone https://github.com/evelyn-escobar/taskFlow_web_app.git
 ```
 
 ---
@@ -56,16 +55,21 @@ git clone https://github.com/daniluescobar-hue/taskflow-ai.git
 ## 2. Entrar a la carpeta
 
 ```bash
-cd taskflow-ai
+cd taskFlow_web_app
 ```
 
 ---
 
-## 3. Instalar dependencias
+## 3. Crear un entorno virtual e instalar dependencias
 
 ```bash
-pip install flask
+python -m venv .venv
+.venv\Scripts\activate      # Windows
+# source .venv/bin/activate  # macOS / Linux
+pip install -r requirements.txt
 ```
+
+La base de datos SQLite (`tasks.db`) se crea sola la primera vez que se ejecuta la aplicación.
 
 ---
 
@@ -85,13 +89,22 @@ http://127.0.0.1:5000
 
 ---
 
+# Seguridad
+
+- Las contraseñas se guardan cifradas con `generate_password_hash` de Werkzeug, nunca en texto plano.
+- Cada usuario solo puede ver, completar y eliminar sus propias tareas.
+- Las consultas SQL usan parámetros (`?`) para evitar inyección SQL.
+- La clave de sesión se lee de la variable de entorno `SECRET_KEY`, y el modo debug solo se activa con `FLASK_DEBUG=1`.
+
+---
+
 # Funcionalidades inteligentes
 
 El sistema calcula automáticamente la prioridad de cada tarea dependiendo de la cercanía de la fecha de entrega:
 
-- 🔴 Alta prioridad → tareas próximas
-- 🟡 Prioridad media → tareas intermedias
-- 🟢 Baja prioridad → tareas lejanas
+- 🔴 Alta prioridad → faltan 3 días o menos
+- 🟡 Prioridad media → faltan entre 4 y 7 días
+- 🟢 Baja prioridad → faltan más de 7 días
 
 Además, TaskBot proporciona mensajes motivacionales y recomendaciones para mejorar la productividad.
 

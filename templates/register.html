@@ -71,6 +71,25 @@
             margin-top: 20px;
         }
 
+        .message {
+
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: bold;
+        }
+
+        .error {
+
+            background: #fdecea;
+            color: #b3261e;
+        }
+
+        .success {
+
+            background: #e7f6ec;
+            color: #1e7b3c;
+        }
+
         a {
 
             color: #764ba2;
@@ -96,6 +115,18 @@
 
     </p>
 
+    {% if error %}
+
+        <p class="message error">{{ error }}</p>
+
+    {% endif %}
+
+    {% if success %}
+
+        <p class="message success">{{ success }}</p>
+
+    {% endif %}
+
     <form action="/register" method="POST">
 
         <input
@@ -108,8 +139,8 @@
         <input
             type="password"
             name="password"
-            placeholder="Contraseña de 4 dígitos"
-            maxlength="4"
+            placeholder="Contraseña (mínimo 6 caracteres)"
+            minlength="6"
             required
         >
 

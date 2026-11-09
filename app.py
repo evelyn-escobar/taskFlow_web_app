@@ -1,12 +1,18 @@
-from flask import Flask, render_template, request, redirect, session
-import sqlite3
+import os
 import random
+import sqlite3
+from datetime import date, datetime
 
-from datetime import datetime
+from flask import Flask, render_template, request, redirect, session
+from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
 
-app.secret_key = "taskflow_secret_key"
+# La clave se lee de una variable de entorno; si no existe, se genera una aleatoria al iniciar
+app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(24).hex()
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "tasks.db")
 
 
 # --------------------------------
@@ -15,56 +21,60 @@ app.secret_key = "taskflow_secret_key"
 
 def connect_db():
 
-    conn = sqlite3.connect("tasks.db")
+    return sqlite3.connect(DB_PATH)
 
-    return conn
+
+def init_db():
+
+    conn = connect_db()
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            priority TEXT,
+            due_date TEXT,
+            completed INTEGER DEFAULT 0
+        )
+    """)
+
+    conn.commit()
+
+    conn.close()
+
+
+init_db()
 
 
 # --------------------------------
-# CREATE TABLES
+# PRIORIDAD AUTOMÁTICA
 # --------------------------------
 
-conn = connect_db()
+def calculate_priority(due_date, today=None):
+    """Alta si faltan 3 días o menos, Media si faltan 7 o menos, Baja en otro caso."""
 
-cursor = conn.cursor()
+    today = today or date.today()
 
-cursor.execute("""
+    days_left = (due_date - today).days
 
-CREATE TABLE IF NOT EXISTS users (
+    if days_left <= 3:
+        return "Alta"
 
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    if days_left <= 7:
+        return "Media"
 
-    username TEXT UNIQUE,
-
-    password TEXT
-
-)
-
-""")
-
-cursor.execute("""
-
-CREATE TABLE IF NOT EXISTS tasks (
-
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-    user_id INTEGER,
-
-    title TEXT,
-
-    priority TEXT,
-
-    due_date TEXT,
-
-    completed INTEGER DEFAULT 0
-
-)
-
-""")
-
-conn.commit()
-
-conn.close()
+    return "Baja"
 
 
 # --------------------------------
@@ -101,12 +111,11 @@ messages = [
 # --------------------------------
 
 @app.route("/", methods=["GET", "POST"])
-
 def login():
 
     if request.method == "POST":
 
-        username = request.form["username"]
+        username = request.form["username"].strip()
 
         password = request.form["password"]
 
@@ -115,18 +124,16 @@ def login():
         cursor = conn.cursor()
 
         cursor.execute(
-
-            "SELECT * FROM users WHERE username=? AND password=?",
-
-            (username, password)
-
+            "SELECT id, username, password FROM users WHERE username=?",
+            (username,)
         )
 
         user = cursor.fetchone()
 
         conn.close()
 
-        if user:
+        # Las contraseñas se guardan cifradas (hash); aquí se compara contra ese hash
+        if user and check_password_hash(user[2], password):
 
             session["user_id"] = user[0]
 
@@ -134,15 +141,10 @@ def login():
 
             return redirect("/dashboard")
 
-        else:
-
-            return render_template(
-
-                "login.html",
-
-                error="Usuario o contraseña incorrectos"
-
-            )
+        return render_template(
+            "login.html",
+            error="Usuario o contraseña incorrectos"
+        )
 
     return render_template("login.html")
 
@@ -152,50 +154,47 @@ def login():
 # --------------------------------
 
 @app.route("/register", methods=["GET", "POST"])
-
 def register():
 
     if request.method == "POST":
 
-        username = request.form["username"]
+        username = request.form["username"].strip()
 
         password = request.form["password"]
 
+        if not username or len(password) < 6:
+
+            return render_template(
+                "register.html",
+                error="Escribe un usuario y una contraseña de al menos 6 caracteres"
+            )
+
+        conn = connect_db()
+
         try:
 
-            conn = connect_db()
-
-            cursor = conn.cursor()
-
-            cursor.execute(
-
+            conn.execute(
                 "INSERT INTO users (username, password) VALUES (?, ?)",
-
-                (username, password)
-
+                (username, generate_password_hash(password))
             )
 
             conn.commit()
 
+        except sqlite3.IntegrityError:
+
+            return render_template(
+                "register.html",
+                error="Ese usuario ya existe"
+            )
+
+        finally:
+
             conn.close()
 
-            return render_template(
-
-                "register.html",
-
-                success="¡Usuario registrado correctamente!"
-
-            )
-
-        except:
-
-            return render_template(
-
-                "register.html",
-
-                error="Ese usuario ya existe"
-
-            )
+        return render_template(
+            "register.html",
+            success="¡Usuario registrado correctamente!"
+        )
 
     return render_template("register.html")
 
@@ -205,7 +204,6 @@ def register():
 # --------------------------------
 
 @app.route("/dashboard")
-
 def dashboard():
 
     if "user_id" not in session:
@@ -217,11 +215,8 @@ def dashboard():
     cursor = conn.cursor()
 
     cursor.execute(
-
         "SELECT * FROM tasks WHERE user_id=? ORDER BY due_date ASC",
-
         (session["user_id"],)
-
     )
 
     tasks = cursor.fetchall()
@@ -231,15 +226,10 @@ def dashboard():
     bot_message = random.choice(messages)
 
     return render_template(
-
         "index.html",
-
         tasks=tasks,
-
         username=session["username"],
-
         bot_message=bot_message
-
     )
 
 
@@ -248,63 +238,39 @@ def dashboard():
 # --------------------------------
 
 @app.route("/add", methods=["POST"])
-
 def add_task():
 
     if "user_id" not in session:
 
         return redirect("/")
 
-    title = request.form["title"]
+    title = request.form["title"].strip()
 
     due_date = request.form["due_date"]
 
-    today = datetime.today()
+    try:
 
-    due = datetime.strptime(due_date, "%Y-%m-%d")
+        due = datetime.strptime(due_date, "%Y-%m-%d").date()
 
-    days_left = (due - today).days
+    except ValueError:
 
-    if days_left <= 3:
+        return redirect("/dashboard")
 
-        priority = "Alta"
+    if not title:
 
-    elif days_left <= 7:
+        return redirect("/dashboard")
 
-        priority = "Media"
-
-    else:
-
-        priority = "Baja"
+    priority = calculate_priority(due)
 
     conn = connect_db()
 
-    cursor = conn.cursor()
-
-    cursor.execute(
-
+    conn.execute(
         """
-
         INSERT INTO tasks
-
         (user_id, title, priority, due_date)
-
         VALUES (?, ?, ?, ?)
-
         """,
-
-        (
-
-            session["user_id"],
-
-            title,
-
-            priority,
-
-            due_date
-
-        )
-
+        (session["user_id"], title, priority, due_date)
     )
 
     conn.commit()
@@ -319,19 +285,18 @@ def add_task():
 # --------------------------------
 
 @app.route("/complete/<int:task_id>")
-
 def complete_task(task_id):
+
+    if "user_id" not in session:
+
+        return redirect("/")
 
     conn = connect_db()
 
-    cursor = conn.cursor()
-
-    cursor.execute(
-
-        "UPDATE tasks SET completed=1 WHERE id=?",
-
-        (task_id,)
-
+    # Solo se puede completar una tarea propia
+    conn.execute(
+        "UPDATE tasks SET completed=1 WHERE id=? AND user_id=?",
+        (task_id, session["user_id"])
     )
 
     conn.commit()
@@ -346,19 +311,18 @@ def complete_task(task_id):
 # --------------------------------
 
 @app.route("/delete/<int:task_id>")
-
 def delete_task(task_id):
+
+    if "user_id" not in session:
+
+        return redirect("/")
 
     conn = connect_db()
 
-    cursor = conn.cursor()
-
-    cursor.execute(
-
-        "DELETE FROM tasks WHERE id=?",
-
-        (task_id,)
-
+    # Solo se puede eliminar una tarea propia
+    conn.execute(
+        "DELETE FROM tasks WHERE id=? AND user_id=?",
+        (task_id, session["user_id"])
     )
 
     conn.commit()
@@ -373,7 +337,6 @@ def delete_task(task_id):
 # --------------------------------
 
 @app.route("/logout")
-
 def logout():
 
     session.clear()
@@ -387,4 +350,5 @@ def logout():
 
 if __name__ == "__main__":
 
-    app.run(debug=True)
+    # El modo debug solo se activa si se pide con la variable FLASK_DEBUG=1
+    app.run(debug=os.environ.get("FLASK_DEBUG") == "1")
